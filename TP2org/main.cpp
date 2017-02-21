@@ -24,26 +24,22 @@ Instrucao *mI = new Instrucao[N];
 void montarMemoriaInst() {
 	int j, random, i = 0;
 	while (i < N) {
-		auto timeNow2 = high_resolution_clock::now();
-		auto timeInt2 = duration_cast<nanoseconds>(timeNow2.time_since_epoch()).count();
-		srand(timeInt2);
-		if ((timeInt2 % 100 + 1) < 70) {
-			for (j = 0; j < 1; j++) {
-				srand(i);
+		auto t1 = high_resolution_clock::now();
+		auto random = duration_cast<nanoseconds>(t1.time_since_epoch()).count();
+		srand(random);
+		if ((rand() % 100) < 70) {
+			srand(0);
+			for (j = 0; j < 10; j++) {
 				mI[i].op = rand() % 2;
-				srand(0);
 				mI[i].endBloco = rand() % TAMRAM;
-				srand(i);
 				mI[i].endPalavra = rand() % 4;
 				i++;
 				if (i == N) break;
 			}
 		}
 		else {
-			for (j = 0; j < 1; j++) {
-				auto timeNow = high_resolution_clock::now();
-				auto timeInt = duration_cast<nanoseconds>(timeNow.time_since_epoch()).count();
-				srand(timeInt);
+			srand(10);
+			for (j = 0; j < 10; j++) {
 				mI[i].op = rand() % 2;
 				mI[i].endBloco = rand() % TAMRAM;
 				mI[i].endPalavra = rand() % 4;
@@ -54,6 +50,81 @@ void montarMemoriaInst() {
 	}
 	mI[N - 1].op = 4;
 	cout << "Memoria Instrucoes Montada" << endl;
+}
+
+int montarMemoriasInst2() {
+#define TAM_FOR 100
+#define PROP_FOR 70 //Probabiidade de ocorrência do laço de repetição, um numero entre 1 e 100;
+
+	long int i, j, k, aleatorio;
+	srand(time(NULL));
+
+	//Arquivo onde será salvo as instruções;
+	FILE *arquivo = fopen("programa.txt", "w");
+	if (arquivo == NULL) {
+		cout << "Erro ao abrir arquivo!" << endl;
+		return 0;
+	}
+
+	//N é o numero de instruções;
+	int n = 2;
+	//instruc é o vetor que conta quantos parametros tem cada instrução;
+	int instruc[] = { 1 , 1 };//Instruções numeradas de 0 a N-1;
+
+											 //Gerando o laço de repetição do programa;
+	vector< vector <long int> > For;
+	for (i = 0; i < TAM_FOR; i++) {
+		vector <long int> aux;
+		aleatorio = rand() % n;
+		aux.push_back(aleatorio);
+		for (j = 0; j < instruc[aleatorio]; j++)
+			aux.push_back(rand() % TAMRAM);
+		For.push_back(aux);
+	}
+
+	for (i = 0; i < N;) {
+		aleatorio = rand() % 100 + 1;
+		if (aleatorio <= PROP_FOR) {
+			for (j = 0; j < TAM_FOR && i < N; j++, i++) {
+				fprintf(arquivo, "%ld", For[j][0]);
+				for (k = 1; k <= instruc[For[j][0]]; k++)
+					fprintf(arquivo, " %ld", For[j][k]);
+				fprintf(arquivo, " %ld", rand() % 4);
+				fprintf(arquivo, "\n");
+			}
+		}
+		else {
+			i++;
+			aleatorio = rand() % n;
+			fprintf(arquivo, "%ld", aleatorio);
+			for (k = 0; k < instruc[aleatorio]; k++)
+				fprintf(arquivo, " %ld", rand() % TAMRAM);
+			fprintf(arquivo, " %ld", rand() % 4);
+			fprintf(arquivo, "\n");
+		}
+	}
+
+	fclose(arquivo);
+	return 0;
+}
+
+int lerArquivo() {
+	FILE *arquivo = fopen("programa.txt", "rb");
+	if (arquivo == NULL) {
+		cout << "Erro ao abrir arquivo!" << endl;
+		return 0;
+	}
+	for (int k = 0; k < N; k++) {
+
+		fscanf(arquivo, "%d", &mI[k].op);
+
+		fscanf(arquivo, "%d", &mI[k].endBloco);
+
+		fscanf(arquivo, "%d", &mI[k].endPalavra);
+
+	}
+	fclose(arquivo);
+	mI[N - 1].op = 4;
 }
 
 void montarMemoriaDados() { // string palavras[4]
@@ -179,14 +250,14 @@ void passaL2L1(int endb, int lugarCopiaL2, int endp) {
 
 void estatisticas() {
 	cout << endl;
-	cout << "H3   " << cacheHitl3;
-	cout << " M3   " << cacheMissl3 << endl;
+	cout << "H3: " << cacheHitl3;
+	cout << " M3: " << cacheMissl3 << endl;
 	cout << "---------------------" << endl;
-	cout << "H2   " << cacheHitl2;
-	cout << " M2   " << cacheMissl2 << endl;
+	cout << "H2: " << cacheHitl2;
+	cout << " M2: " << cacheMissl2 << endl;
 	cout << "---------------------" << endl;
-	cout << "H1   " << cacheHitl1;
-	cout << " M1   " << cacheMissl1 << endl;
+	cout << "H1: " << cacheHitl1;
+	cout << " M1: " << cacheMissl1 << endl;
 	cout << "---------------------" << endl;
 }
 
@@ -224,14 +295,15 @@ void opcode1(int endb, int endp) {
 	int numero = aux.numero;
 	int decode = aux.decode;
 	int i = 0;
-	//if (decode != 0)
-	//	cout << numero << ":" << decode << endl;
-	//else {
+	if (decode != 0) {
+		//cout << numero << ":" << decode << endl;
+	}
+	if (decode == 0) {
 		while ((rand() % 300) + 1 != numero)
 			i++;
 		cacheTrocarValorL1(endb, endp, i);
 	}
-//}
+}
 
 void cacheTrocarValorL1(int endb, int endp, int decode) {
 	int pos = -1;
@@ -251,29 +323,30 @@ void trocaPosicaoCache(LinhaCache* cache1, LinhaCache* cache2, int pos1, int pos
 	Palavra palavraAux;
 	bool boolAux;
 	int intAux;
-		for (int i = 0; i < 4; i++) {
-			palavraAux = cache1[pos1].palavra[i];
-			cache1[pos1].palavra[i] = cache2[pos2].palavra[i];
-			cache2[pos2].palavra[i] = palavraAux;
-		}// trocou as palavras
-		// troca alterado
-		boolAux = cache1[pos1].alterado;
-		cache1[pos1].alterado = cache2[pos2].alterado;
-		cache2[pos2].alterado = boolAux;
-		// troca acesso
-		intAux = cache1[pos1].acesso;
-		cache1[pos1].acesso = cache2[pos2].acesso;
-		cache2[pos2].acesso = intAux;
-		//troca end de Bloco
-		intAux = cache1[pos1].endBloco;
-		cache1[pos1].endBloco = cache2[pos2].endBloco;
-		cache2[pos2].endBloco = intAux;
+	for (int i = 0; i < 4; i++) {
+		palavraAux = cache1[pos1].palavra[i];
+		cache1[pos1].palavra[i] = cache2[pos2].palavra[i];
+		cache2[pos2].palavra[i] = palavraAux;
+	}// trocou as palavras
+	// troca alterado
+	boolAux = cache1[pos1].alterado;
+	cache1[pos1].alterado = cache2[pos2].alterado;
+	cache2[pos2].alterado = boolAux;
+	// troca acesso
+	intAux = cache1[pos1].acesso;
+	cache1[pos1].acesso = cache2[pos2].acesso;
+	cache2[pos2].acesso = intAux;
+	//troca end de Bloco
+	intAux = cache1[pos1].endBloco;
+	cache1[pos1].endBloco = cache2[pos2].endBloco;
+	cache2[pos2].endBloco = intAux;
 }
 
 int main() {
+	montarMemoriasInst2();
 	montarMemoriaDados();
-	montarMemoriaInst();
 	iniciarMemorias();
+	lerArquivo();
 	lerUpCodes();
 	system("pause");
 }

@@ -5,15 +5,17 @@
 #define HEADER_H
 
 #define TAML1 8
-#define TAML2 128
-#define TAML3 256
-#define N 1000
+#define TAML2 16
+#define TAML3 128
+#define N 100000
 #define TAMRAM 1000
 
 #include <iostream>
 #include <ctime>
 #include <cstdlib>
+#include <cstdio>
 #include <chrono>
+#include <vector>
 
 
 typedef struct p {
@@ -53,6 +55,8 @@ void estatisticas();
 void opcode0(int, int);
 void opcode1(int, int);
 void trocaPosicaoCache(LinhaCache* cache1, LinhaCache* cache2, int pos1, int pos2);
+int montarMemoriasInst2();
+int lerArquivo();
 
 
 #endif HEADER_H
