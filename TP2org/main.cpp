@@ -22,26 +22,30 @@ BlocoMP *RAM = new BlocoMP[TAMRAM];
 Instrucao *mI = new Instrucao[N];
 
 void montarMemoriaInst() {
-	int j, i = 0;
+	int j, random, i = 0;
 	while (i < N) {
-		srand(i);
-		if ((rand() % 100 + 1) < 70) {
-			for (j = 0; j < 50; j++) {
-				srand(j);
+		auto timeNow2 = high_resolution_clock::now();
+		auto timeInt2 = duration_cast<nanoseconds>(timeNow2.time_since_epoch()).count();
+		srand(timeInt2);
+		if ((timeInt2 % 100 + 1) < 70) {
+			for (j = 0; j < 1; j++) {
+				srand(i);
 				mI[i].op = rand() % 2;
-				mI[i].endBloco = rand() % 1000;
+				srand(0);
+				mI[i].endBloco = rand() % TAMRAM;
+				srand(i);
 				mI[i].endPalavra = rand() % 4;
 				i++;
 				if (i == N) break;
 			}
 		}
 		else {
-			for (j = 0; j < 50; j++) {
+			for (j = 0; j < 1; j++) {
 				auto timeNow = high_resolution_clock::now();
 				auto timeInt = duration_cast<nanoseconds>(timeNow.time_since_epoch()).count();
 				srand(timeInt);
 				mI[i].op = rand() % 2;
-				mI[i].endBloco = rand() % 1000;
+				mI[i].endBloco = rand() % TAMRAM;
 				mI[i].endPalavra = rand() % 4;
 				i++;
 				if (i == N) break;
@@ -105,7 +109,7 @@ void verificaL2(int endb, int endp) {
 	for (int i = 0; i < TAML2; i++) {
 		if (cacheNivell2[i].endBloco == endb) {
 			cacheHitl2++;
-			passaL2L1(endb, endp, i);
+			passaL2L1(endb, i, endp);
 			return;
 		}
 	}
@@ -116,8 +120,8 @@ void verificaL2(int endb, int endp) {
 void verificaL3(int endb, int endp) {
 	for (int i = 0; i < TAML3; i++) {
 		if (cacheNivell3[i].endBloco == endb) {
-			passaL3L2(endb, endp, i);
 			cacheHitl3++;
+			passaL3L2(endb, i, endp);
 			return;
 		}
 	}
@@ -157,22 +161,7 @@ void passaL3L2(int endb, int lugarCopiaL3, int endp) {
 		if (cacheNivell2[i].acesso == 0)
 			break;
 	}
-	Palavra aux;
-	bool auxb;
-	int auxi;
-	auxb = cacheNivell3[lugarCopiaL3].alterado;
-	cacheNivell3[lugarCopiaL3].alterado = cacheNivell2[localMenosAcessadoL2].alterado;
-	cacheNivell2[localMenosAcessadoL2].alterado = auxb;
-	auxi = cacheNivell3[lugarCopiaL3].acesso;
-	cacheNivell3[lugarCopiaL3].acesso = cacheNivell2[localMenosAcessadoL2].acesso;
-	cacheNivell2[localMenosAcessadoL2].acesso = auxi; 
-	cacheNivell3[lugarCopiaL3].endBloco = cacheNivell2[localMenosAcessadoL2].endBloco;
-	cacheNivell2[localMenosAcessadoL2].endBloco = endb;
-	for (int i = 0; i < 4; i++) {
-		aux = cacheNivell2[localMenosAcessadoL2].palavra[i];
-		cacheNivell2[localMenosAcessadoL2].palavra[i] = cacheNivell3[lugarCopiaL3].palavra[i];
-		cacheNivell3[lugarCopiaL3].palavra[i] = aux;
-	}
+	trocaPosicaoCache(cacheNivell3, cacheNivell2, lugarCopiaL3, localMenosAcessadoL2);
 	passaL2L1(endb, localMenosAcessadoL2, endp);
 }
 
@@ -185,22 +174,7 @@ void passaL2L1(int endb, int lugarCopiaL2, int endp) {
 		if (cacheNivell1[i].acesso == 0)
 			break;
 	}
-	int auxi;
-	Palavra aux;
-	bool auxb;
-	cacheNivell2[lugarCopiaL2].endBloco = cacheNivell1[localMenosAcessadoL1].endBloco;
-	cacheNivell1[localMenosAcessadoL1].endBloco = endb;
-	auxb = cacheNivell2[lugarCopiaL2].alterado;
-	cacheNivell2[lugarCopiaL2].alterado = cacheNivell1[localMenosAcessadoL1].alterado;
-	cacheNivell1[localMenosAcessadoL1].alterado = auxb;
-	auxi = cacheNivell2[lugarCopiaL2].acesso;
-	cacheNivell2[lugarCopiaL2].acesso = cacheNivell1[localMenosAcessadoL1].acesso;
-	cacheNivell1[localMenosAcessadoL1].acesso = auxi;
-	for (int i = 0; i < 4; i++) {
-		aux = cacheNivell1[localMenosAcessadoL1].palavra[i];
-		cacheNivell1[localMenosAcessadoL1].palavra[i] = cacheNivell2[lugarCopiaL2].palavra[i];
-		cacheNivell2[lugarCopiaL2].palavra[i] = aux;
-	}
+	trocaPosicaoCache(cacheNivell2, cacheNivell1, lugarCopiaL2, localMenosAcessadoL1);
 }
 
 void estatisticas() {
@@ -241,7 +215,7 @@ void opcode0(int endb, int endp) {
 	Palavra palavra = verificaL1(endb, endp);
 	int numero = palavra.numero;
 	int decode = palavra.decode;
-	cout << numero << ":" << decode << endl;
+	//cout << numero << ":" << decode << endl;
 }
 
 void opcode1(int endb, int endp) {
@@ -250,14 +224,14 @@ void opcode1(int endb, int endp) {
 	int numero = aux.numero;
 	int decode = aux.decode;
 	int i = 0;
-	if (decode != 0)
-		cout << numero << ":" << decode << endl;
-	else {
+	//if (decode != 0)
+	//	cout << numero << ":" << decode << endl;
+	//else {
 		while ((rand() % 300) + 1 != numero)
 			i++;
 		cacheTrocarValorL1(endb, endp, i);
 	}
-}
+//}
 
 void cacheTrocarValorL1(int endb, int endp, int decode) {
 	int pos = -1;
@@ -271,6 +245,29 @@ void cacheTrocarValorL1(int endb, int endp, int decode) {
 		cacheNivell1[pos].alterado = true;
 		cacheNivell1[pos].palavra[endp].decode = decode;
 	}
+}
+
+void trocaPosicaoCache(LinhaCache* cache1, LinhaCache* cache2, int pos1, int pos2) {
+	Palavra palavraAux;
+	bool boolAux;
+	int intAux;
+		for (int i = 0; i < 4; i++) {
+			palavraAux = cache1[pos1].palavra[i];
+			cache1[pos1].palavra[i] = cache2[pos2].palavra[i];
+			cache2[pos2].palavra[i] = palavraAux;
+		}// trocou as palavras
+		// troca alterado
+		boolAux = cache1[pos1].alterado;
+		cache1[pos1].alterado = cache2[pos2].alterado;
+		cache2[pos2].alterado = boolAux;
+		// troca acesso
+		intAux = cache1[pos1].acesso;
+		cache1[pos1].acesso = cache2[pos2].acesso;
+		cache2[pos2].acesso = intAux;
+		//troca end de Bloco
+		intAux = cache1[pos1].endBloco;
+		cache1[pos1].endBloco = cache2[pos2].endBloco;
+		cache2[pos2].endBloco = intAux;
 }
 
 int main() {
