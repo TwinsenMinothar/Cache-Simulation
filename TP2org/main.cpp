@@ -5,9 +5,7 @@ using namespace std::chrono;
 
 
 int PC = 0;
-int IR = -1; //valor opcode
-int* MAR = NULL; //valor endere�o bloco ou linha 
-int* MARp = NULL; //valor endereco palavra
+//int IR = -1; //valor opcode
 Instrucao MBR;
 string MQ;
 int cacheMissl1, cacheHitl1;
@@ -53,7 +51,7 @@ void montarMemoriaInst() {
 }
 
 int montarMemoriasInst2() {
-#define TAM_FOR 100
+#define TAM_FOR 50
 #define PROP_FOR 70 //Probabiidade de ocorrência do laço de repetição, um numero entre 1 e 100;
 
 	long int i, j, k, aleatorio;
@@ -162,6 +160,7 @@ void iniciarMemorias() {
 }
 
 Palavra verificaL1(int endb, int endp) {
+	tempo[PC] += 5;
 inicioL1:
 	for (int i = 0; i < TAML1; i++) {
 		if (cacheNivell1[i].endBloco == endb) {
@@ -177,6 +176,7 @@ inicioL1:
 }
 
 void verificaL2(int endb, int endp) {
+	tempo[PC] += 10;
 	for (int i = 0; i < TAML2; i++) {
 		if (cacheNivell2[i].endBloco == endb) {
 			cacheHitl2++;
@@ -189,6 +189,7 @@ void verificaL2(int endb, int endp) {
 }
 
 void verificaL3(int endb, int endp) {
+	tempo[PC] += 25;
 	for (int i = 0; i < TAML3; i++) {
 		if (cacheNivell3[i].endBloco == endb) {
 			cacheHitl3++;
@@ -201,6 +202,7 @@ void verificaL3(int endb, int endp) {
 }
 
 void passaRAML3(int endb, int endp) {
+	tempo[PC] += 100;
 	int menosUsadoL3 = cacheNivell3[0].acesso;
 	int localMenosAcessadoL3 = 0;
 	for (int i = 0; i < TAML3; i++) {
@@ -250,6 +252,11 @@ void passaL2L1(int endb, int lugarCopiaL2, int endp) {
 
 void estatisticas() {
 	cout << endl;
+	int tempoTotal = 0;
+	for (int i = 0; i < N - 1; i++)
+		tempoTotal += tempo[i];
+	cout << "Tempo Total: " << tempoTotal << endl;
+	cout << "---------------------" << endl;
 	cout << "H3: " << cacheHitl3;
 	cout << " M3: " << cacheMissl3 << endl;
 	cout << "---------------------" << endl;
@@ -262,19 +269,18 @@ void estatisticas() {
 }
 
 void lerUpCodes() {
-	int OP = mI[0].op;
+	int IR = mI[0].op;
 	int PC = 0;
-	int endBloco;
-	int endPalavra;
-	while (OP != 4) {
-		OP = mI[PC].op;
-		endBloco = mI[PC].endBloco;
-		endPalavra = mI[PC].endPalavra;
-		if (OP == 0)
-			opcode0(endBloco, endPalavra);
-		else if (OP == 1)
-			opcode1(endBloco, endPalavra);
-		else if (OP == 4) {
+	int MAR,MARp;
+	while (IR != 4) {
+		IR = mI[PC].op;
+		MAR = mI[PC].endBloco;
+		MARp = mI[PC].endPalavra;
+		if (IR == 0)
+			opcode0(MAR, MARp);
+		else if (IR == 1)
+			opcode1(MAR, MARp);
+		else if (IR == 4) {
 			estatisticas();
 			return;
 		}
@@ -342,11 +348,41 @@ void trocaPosicaoCache(LinhaCache* cache1, LinhaCache* cache2, int pos1, int pos
 	cache2[pos2].endBloco = intAux;
 }
 
+void terminaEPassaRAM() {
+	int alterados = 0;
+	for (int i = 0; i < TAML3; i++) {
+		if (cacheNivell3[i].alterado == true) { // atualiza ram se nescessario
+			for (int j = 0; j < 4; j++) {
+				RAM[cacheNivell3[i].endBloco].palavra[j] = cacheNivell3[i].palavra[j];
+				alterados++;
+			}
+		}
+	}
+	for (int i = 0; i < TAML1; i++) {
+		if (cacheNivell1[i].alterado == true) { // atualiza ram se nescessario
+			for (int j = 0; j < 4; j++) {
+				RAM[cacheNivell1[i].endBloco].palavra[j] = cacheNivell1[i].palavra[j];
+				alterados++;
+			}
+		}
+	}
+	for (int i = 0; i < TAML2; i++) {
+		if (cacheNivell2[i].alterado == true) { // atualiza ram se nescessario
+			for (int j = 0; j < 4; j++) {
+				RAM[cacheNivell2[i].endBloco].palavra[j] = cacheNivell2[i].palavra[j];
+				alterados++;
+			}
+		}
+	}
+	//cout << endl << alterados << endl;
+}
+
 int main() {
 	montarMemoriasInst2();
 	montarMemoriaDados();
 	iniciarMemorias();
 	lerArquivo();
 	lerUpCodes();
-	system("pause");
+	terminaEPassaRAM();
+	return 0;
 }
